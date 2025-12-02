@@ -42,13 +42,13 @@
 
       <!-- Admin Token Panel (hidden by default) -->
       <section id="admin-panel" style="display:none; margin-top:20px;">
-        <h3>Admin Token Generator</h3>
+        <h3>Admin Token Control</h3>
         <form id="spawnForm">
           <label for="targetUsername">Username</label>
           <input type="text" id="targetUsername" required>
-          <label for="tokenAmount">Amount</label>
+          <label for="tokenAmount">Amount (use negative to burn)</label>
           <input type="number" id="tokenAmount" step="0.01" required>
-          <button type="submit">Spawn Tokens</button>
+          <button type="submit">Update Tokens</button>
         </form>
         <div id="spawnMessage" class="message" aria-live="polite"></div>
       </section>
@@ -95,29 +95,25 @@
     console.error('No logged-in user found.');
     return;
   }
-const user = JSON.parse(userData);
+  const user = JSON.parse(userData);
 
-// --- Fix for admin panel visibility ---
-const users = JSON.parse(localStorage.getItem('users') || '[]');
-const current = users.find(u => u.username === user.username);
-if (current) {
-  user.role = current.role;
-  localStorage.setItem('idi_user', JSON.stringify(user));
-}
+  // --- Fix for admin panel visibility ---
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const current = users.find(u => u.username === user.username);
+  if (current) {
+    user.role = current.role;
+    localStorage.setItem('idi_user', JSON.stringify(user));
+  }
 
-if (user.role === 'admin') {
-  document.getElementById('admin-panel').style.display = 'block';
-}
-
+  if (user.role === 'admin') {
+    document.getElementById('admin-panel').style.display = 'block';
+  }
 
   // Update UI
   document.getElementById('owner').textContent = `${user.fullName || user.username}`;
   document.getElementById('balance').textContent = ((user.balance || 0)).toFixed(2);
 
   const isAdmin = user.role === 'admin';
-  if (isAdmin) {
-    document.getElementById('admin-panel').style.display = 'block';
-  }
 
   // Logout button
   const logoutBtn = document.getElementById('logoutBtn');
@@ -170,7 +166,7 @@ if (user.role === 'admin') {
     msg.textContent = `Sent ${amount} IDI to ${recipient.username}`;
   });
 
-  // Admin spawn tokens
+  // Admin spawn/burn tokens
   if (isAdmin) {
     document.getElementById('spawnForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -179,13 +175,28 @@ if (user.role === 'admin') {
       const msg = document.getElementById('spawnMessage');
       msg.className = 'message'; msg.textContent = '';
 
-      if (!targetUsername || amount <= 0) { msg.classList.add('error'); msg.textContent = 'Enter valid username and amount'; return; }
+      if (!targetUsername || isNaN(amount)) {
+        msg.classList.add('error');
+        msg.textContent = 'Enter valid username and amount';
+        return;
+      }
 
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const target = users.find(u => u.username === targetUsername);
-      if (!target) { msg.classList.add('error'); msg.textContent = 'User not found'; return; }
+      if (!target) {
+        msg.classList.add('error');
+        msg.textContent = 'User not found';
+        return;
+      }
 
-      target.balance = (target.balance || 0) + amount;
+      const newBalance = (target.balance || 0) + amount;
+      if (newBalance < 0) {
+        msg.classList.add('error');
+        msg.textContent = 'Cannot burn more than user balance';
+        return;
+      }
+
+      target.balance = newBalance;
       localStorage.setItem('users', JSON.stringify(users));
 
       if (target.username === user.username) {
@@ -193,11 +204,11 @@ if (user.role === 'admin') {
         localStorage.setItem('idi_user', JSON.stringify(target));
       }
 
-      // --- Log admin spawn transaction ---
+      // --- Log admin transaction ---
       const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       transactions.push({
         time: new Date().toISOString(),
-        from: 'ADMIN',
+        from: amount >= 0 ? 'ADMIN (+)' : 'ADMIN (-)',
         to: target.username,
         amount: amount
       });
@@ -205,7 +216,7 @@ if (user.role === 'admin') {
       // --- End log ---
 
       msg.classList.add('success');
-      msg.textContent = `Spawned ${amount} IDI to ${target.username}`;
+      msg.textContent = `${amount >= 0 ? 'Spawned' : 'Burned'} ${Math.abs(amount)} IDI for ${target.username}`;
     });
   }
 
@@ -225,3 +236,4 @@ if (user.role === 'admin') {
 
 </body>
 </html>
+
