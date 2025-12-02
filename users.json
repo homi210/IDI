@@ -2,7 +2,7 @@
   {
     "id": "1764690162931",
     "username": "testuser",
-    "password": "$2a$10$rre5UPU28/ExA8T20mOUS.rfh2OugUITH6YjQ1/uyfHteb7zSE8GK",
+    "password": "homi123",
     "fullName": "Test",
     "email": "test@example.com",
     "balance": 840
@@ -10,7 +10,7 @@
   {
     "id": "1764690478118",
     "username": "Homi",
-    "password": "$2a$10$mm7omlpIGhp7hKP8kPWW5ec/EZtbPypEprn0TS3R6LmSsY48rNvLe",
+    "password": "homi123",
     "fullName": "Hongming Lin",
     "email": "xhxhomi@gmail.com",
     "balance": 1000,
