@@ -7,15 +7,15 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const USERS_FILE = path.join(__dirname, 'users.json');
-const SECRET = 'IDI_SUPER_SECRET'; // change this to something strong
+const SECRET = 'IDI_SUPER_SECRET'; // change to something strong
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(__dirname)); // serve html/css/js files
+app.use(express.static(__dirname));
 
-// Helper functions
+// --- Helper functions ---
 function readUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
 }
@@ -47,13 +47,17 @@ function authMiddleware(req, res, next) {
 
 // Login
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const users = readUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+  const username = (req.body.username || '').trim();
+  const password = (req.body.password || '').trim();
+
+  const user = findUser(username);
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
 
   const token = jwt.sign({ username: user.username, role: user.role || 'user' }, SECRET, { expiresIn: '12h' });
-  res.json({ 
+
+  res.json({
     id: user.id,
     username: user.username,
     fullName: user.fullName,
@@ -68,7 +72,8 @@ app.post('/api/login', (req, res) => {
 app.get('/api/me', authMiddleware, (req, res) => {
   const user = findUser(req.user.username);
   if (!user) return res.status(401).json({ error: 'User not found' });
-  res.json({ 
+
+  res.json({
     username: user.username,
     fullName: user.fullName,
     email: user.email,
@@ -79,13 +84,13 @@ app.get('/api/me', authMiddleware, (req, res) => {
 
 // Send IDI
 app.post('/api/send', authMiddleware, (req, res) => {
-  const { fromUsername, toUsername, amount } = req.body;
-  if (!fromUsername || !toUsername || !amount || amount <= 0) {
+  const { toUsername, amount } = req.body;
+  if (!toUsername || !amount || amount <= 0) {
     return res.status(400).json({ error: 'Invalid parameters' });
   }
 
   const users = readUsers();
-  const sender = users.find(u => u.username === fromUsername);
+  const sender = findUser(req.user.username);
   const recipient = users.find(u => u.username === toUsername);
   if (!sender || !recipient) return res.status(404).json({ error: 'User not found' });
   if ((sender.balance || 0) < amount) return res.status(400).json({ error: 'Insufficient balance' });
@@ -114,7 +119,7 @@ app.post('/api/admin/adjust', authMiddleware, (req, res) => {
   if (!target) return res.status(404).json({ error: 'User not found' });
 
   target.balance = (target.balance || 0) + amount;
-  if (target.balance < 0) target.balance = 0; // don't allow negative balance
+  if (target.balance < 0) target.balance = 0; // no negative balance
 
   writeUsers(users);
 
