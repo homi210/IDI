@@ -26,50 +26,51 @@
     <div id="loginMessage" class="message" aria-live="polite"></div>
 </main>
 
-<script>
-(async () => {
-    // Load users from JSON if not in localStorage
-    if (!localStorage.getItem('users')) {
-        try {
-            const res = await fetch('users.json');
-            const users = await res.json();
-            localStorage.setItem('users', JSON.stringify(users));
-        } catch(err) {
-            console.error('Failed to load users.json', err);
-        }
+const form = document.getElementById('loginForm');
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const msg = document.getElementById('loginMessage');
+    msg.className = 'message'; msg.textContent = '';
+
+    if (!username || username.length < 3) {
+        msg.classList.add('error');
+        msg.textContent = 'Username must be at least 3 characters';
+        return;
+    }
+    if (!password || password.length < 3) {
+        msg.classList.add('error');
+        msg.textContent = 'Password must be at least 3 characters';
+        return;
     }
 
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (localStorage.getItem('idi_user')) {
-        logoutBtn.style.display = 'inline-block';
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('idi_user');
-            window.location.href = 'Index.html';
+    try {
+        // Send POST to backend /api/login
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
         });
-    }
 
-    const form = document.getElementById('loginForm');
-    form.addEventListener('submit', e => {
-        e.preventDefault();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-        const msg = document.getElementById('loginMessage');
-        msg.className = 'message'; msg.textContent = '';
+        const data = await response.json();
 
-        if (!username || username.length < 3) { msg.classList.add('error'); msg.textContent = 'Username must be at least 3 characters'; return; }
-        if (!password || password.length < 3) { msg.classList.add('error'); msg.textContent = 'Password must be at least 3 characters'; return; }
+        if (!response.ok) {
+            msg.classList.add('error');
+            msg.textContent = data.error || 'Login failed';
+            return;
+        }
 
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.username === username && u.password === password);
-        if (!user) { msg.classList.add('error'); msg.textContent = 'Invalid username or password'; return; }
-
-        localStorage.setItem('idi_user', JSON.stringify(user));
+        // Save login to localStorage for session (you can modify as needed)
+        localStorage.setItem('idi_user', JSON.stringify(data));
         msg.classList.add('success');
-        msg.textContent = `Welcome ${user.fullName || user.username}`;
+        msg.textContent = `Welcome ${data.fullName || data.username}`;
 
         setTimeout(() => { window.location.href = 'Account.html'; }, 500);
-    });
-})();
-</script>
+    } catch (err) {
+        msg.classList.add('error');
+        msg.textContent = 'Failed to connect to server';
+    }
+});
 </body>
 </html>
