@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign Up - IDI Bank</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Sign Up</h1>
+    <nav>
+      <a href="Index.html">Home</a>
+      <a href="Login.html">Login</a>
+      <a href="Account.html">Account</a>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </nav>
+  </header>
+  <script>
+    const t=localStorage.getItem('idi_token'); if (t) { document.getElementById('logoutBtn').style.display='inline-block'; document.getElementById('logoutBtn').addEventListener('click', ()=>{ localStorage.removeItem('idi_token'); localStorage.removeItem('idi_user'); window.location.href='Index.html';}); }
+  </script>
+
+  <main>
+    <form id="signupForm">
+      <div class="form-row">
+        <label for="fullName">Full Name</label>
+        <input type="text" id="fullName" name="fullName" placeholder="John Doe">
+        <span id="fullName-error" class="field-message"></span>
+      </div>
+      <div class="form-row">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="john@example.com">
+        <span id="email-error" class="field-message"></span>
+      </div>
+      <div class="form-row">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required placeholder="username">
+        <span id="username-error" class="field-message"></span>
+      </div>
+      <div class="form-row">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="password">
+        <span id="password-error" class="field-message"></span>
+      </div>
+      <button type="submit">Sign up</button>
+    </form>
+
+    <div id="message" class="message" aria-live="polite"></div>
+  </main>
+
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('fullName').value;
+      const email = document.getElementById('email').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      // Basic client-side validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const msgEl = document.getElementById('message');
+      msgEl.className = 'message';
+      // Clear previous field messages and styling
+      ['fullName','email','username','password'].forEach(field => {
+        const el = document.getElementById(field);
+        if (el) el.classList.remove('field-error');
+        const span = document.getElementById(field + '-error');
+        if (span) span.textContent = '';
+      });
+      if (!username || username.length < 3) {
+        msgEl.classList.add('error'); msgEl.textContent = 'Username must be at least 3 characters';
+        document.getElementById('username').classList.add('field-error');
+        document.getElementById('username-error').textContent = 'Please enter a username (3+ chars)';
+        return;
+      }
+      if (!password || password.length < 8) {
+        msgEl.classList.add('error'); msgEl.textContent = 'Password must be at least 8 characters';
+        document.getElementById('password').classList.add('field-error');
+        document.getElementById('password-error').textContent = 'Use at least 8 characters for your password';
+        return;
+      }
+      if (email && !emailRegex.test(email)) {
+        msgEl.classList.add('error'); msgEl.textContent = 'Please enter a valid email address';
+        document.getElementById('email').classList.add('field-error');
+        document.getElementById('email-error').textContent = 'Invalid email format';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fullName, email, username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        msgEl.classList.add('success');
+        msgEl.textContent = 'Account created: ' + data.username;
+        // Auto-login: call /api/login to set token
+        try {
+          const loginRes = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+          const loginData = await loginRes.json();
+            // store user info and token (if returned) in localStorage
+            const storedUser = { id: loginData.id, username: loginData.username, fullName: loginData.fullName, email: loginData.email, balance: loginData.balance || 0 };
+            if (loginRes.ok && loginData.token) {
+              localStorage.setItem('idi_token', loginData.token);
+              storedUser.balance = loginData.balance || storedUser.balance;
+            } else {
+              // If no token, inform the user that admin must generate it
+              msgEl.classList.add('error'); msgEl.textContent = 'Account created; however, no token has been issued for your account. Ask an admin to generate a token.';
+            }
+            localStorage.setItem('idi_user', JSON.stringify(storedUser));
+            setTimeout(() => { window.location.href = 'Account.html'; }, 800);
+        } catch (e) { setTimeout(() => { window.location.href = 'Login.html'; }, 800); }
+      } catch (err) {
+        msgEl.classList.add('error');
+        // Print structured server errors if present
+        if (err && err.details) {
+          // apply field errors where present
+          Object.keys(err.details).forEach(k => {
+            const span = document.getElementById(k + '-error');
+            const input = document.getElementById(k);
+            if (span) span.textContent = err.details[k];
+            if (input) input.classList.add('field-error');
+          });
+          // also show a summary
+          const parts = Object.keys(err.details).map(k => `${k}: ${err.details[k]}`);
+          msgEl.textContent = parts.join('; ');
+        } else {
+          msgEl.textContent = err.error || (err.message || 'Error');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transactions - IDI Bank</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header>
+  <h1>My Transactions</h1>
+  <nav>
+    <a href="Index.html">Home</a>
+    <a href="Account.html">Account</a>
+  </nav>
+</header>
+<main>
+  <div class="container">
+    <section>
+      <p id="status" class="message" aria-live="polite"></p>
+      <table id="txTable" style="width:100%; border-collapse:collapse;">
+        <thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+<script>
+const userData = JSON.parse(localStorage.getItem('idi_user') || '{}');
+const status = document.getElementById('status');
+if (!userData || !userData.username) {
+    status.className = 'message error';
+    status.textContent = 'Please login first';
+    setTimeout(() => { window.location.href = 'Login.html'; }, 1000);
+}
+
+const username = userData.username;
+const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+const myTxns = transactions.filter(tx => tx.from === username || tx.to === username);
+
+const tbody = document.querySelector('#txTable tbody');
+tbody.innerHTML = '';
+
+if (myTxns.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="4" style="text-align:center">No transactions yet</td>`;
+    tbody.appendChild(tr);
+} else {
+    myTxns.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${t.time}</td><td>${t.from}</td><td>${t.to}</td><td style="text-align:right">${t.amount}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+</script>
+
+</body>
+</html>

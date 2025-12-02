@@ -1,0 +1,49 @@
+/* Shared styles for IDI Bank */
+:root{
+  /* Minimalist monochrome theme */
+  --bg: #ffffff;
+  --accent: #111111; /* subtle black */
+  --muted: #6b7280;
+  --text: #111111;
+  --radius: 6px;
+}
+
+*{box-sizing: border-box}
+html,body{font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); margin:0;padding:0}
+body{padding: 24px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+nav a{color:var(--accent);text-decoration:none;margin-right:10px}
+nav a:hover{text-decoration:underline}
+
+main{max-width:980px;margin: 0 auto;background:#fff;padding:20px;border-radius:var(--radius);}
+
+/* hero and feature cards */
+.hero{background: transparent; padding: 36px 16px; border-radius: var(--radius); margin-bottom: 20px; text-align: center}
+.hero h1{font-size:2.0rem; margin-bottom:6px; font-weight:700}
+.hero p{color:var(--muted); margin-bottom:12px}
+.features{display:flex; gap:16px; justify-content:center; margin-top:12px}
+.card{background:#fff;border-radius:8px;padding:12px 16px;width:220px;border:1px solid #ececec}
+.card h3{margin:0 0 8px 0}
+
+h1{margin:0 0 16px 0;font-size:1.6rem}
+
+form{margin-top:8px}
+.form-row{display:flex;flex-direction:column;margin-bottom:12px}
+label{font-weight:600;margin-bottom:6px}
+input[type=text],input[type=password],input[type=email],button{padding:10px;border-radius:6px;border:1px solid #e5e7eb;font-size:14px}
+
+button{background:transparent;color:var(--accent);border:1px solid #ddd;cursor:pointer;padding:10px 12px}
+button:hover{opacity:0.95}
+
+.message{margin-top:12px;padding:10px;border-radius:6px}
+.error{background:#fff9f9;border:1px solid #f1d3d6;color:#991b1b}
+.success{background:#fbfff7;border:1px solid #dfead9;color:#14532d}
+
+.field-error{ border-color: #ef4444; box-shadow: 0 0 1px rgba(239,68,68,0.6); }
+.field-message{ color:#991b1b; font-size:13px; margin-top:6px }
+
+/* small screens adjustments */
+@media (max-width:640px){
+    main{padding:12px}
+    h1{font-size:1.2rem}
+}

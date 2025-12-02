@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Login - IDI Bank</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Login to IDI Bank</h1>
+        <nav>
+            <a href="Index.html">Home</a>
+            <a href="Account.html">Account</a>
+            <a href="Signup.html">Sign up</a>
+            <button id="logoutBtn" style="display:none;">Logout</button>
+        </nav>
+    </header>
+    <script>
+      const t = localStorage.getItem('idi_token');
+      if (t) { document.getElementById('logoutBtn').style.display = 'inline-block'; document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('idi_token'); localStorage.removeItem('idi_user'); window.location.href = 'Index.html'; }); }
+    </script>
+    <main>
+        <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+                <span id="username-error" class="field-message"></span>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <span id="password-error" class="field-message"></span>
+            <button type="submit">Login</button>
+        </form>
+        <div id="loginMessage" class="message" aria-live="polite"></div>
+    </main>
+    <script>
+        // Login form handler: call backend /api/login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+                        // clear field errors
+                        ['username','password'].forEach(f => {
+                            document.getElementById(f).classList.remove('field-error');
+                            const sp = document.getElementById(f + '-error'); if (sp) sp.textContent = '';
+                        });
+                        const username = document.getElementById('username').value;
+                        const password = document.getElementById('password').value;
+            const msgEl = document.getElementById('loginMessage');
+            msgEl.className = 'message';
+            if (!username || username.length < 3) { msgEl.classList.add('error'); msgEl.textContent = 'Username must be at least 3 characters'; return; }
+            if (!password || password.length < 8) { msgEl.classList.add('error'); msgEl.textContent = 'Password must be at least 8 characters'; return; }
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) throw data;
+                msgEl.classList.add('success');
+                msgEl.textContent = `Welcome ${data.fullName || data.username}`;
+                // store user info in localStorage even if token isn't present so we can show the user a friendly page
+                const userInfo = { id: data.id, username: data.username, fullName: data.fullName, email: data.email, balance: data.balance || 0 };
+                if (data.token) {
+                    localStorage.setItem('idi_token', data.token);
+                    userInfo.balance = data.balance || userInfo.balance;
+                }
+                localStorage.setItem('idi_user', JSON.stringify(userInfo));
+                // If we have a token redirect to Account page, otherwise show a message and still go to Account which will prompt for token actions
+                setTimeout(() => { window.location.href = 'Account.html'; }, 700);
+            } catch (err) {
+                msgEl.classList.add('error');
+                if (err && err.details) {
+                    Object.keys(err.details).forEach(k => {
+                        const sp = document.getElementById(k + '-error'); if (sp) sp.textContent = err.details[k];
+                        const inp = document.getElementById(k); if (inp) inp.classList.add('field-error');
+                    });
+                    const parts = Object.keys(err.details).map(k => `${k}: ${err.details[k]}`);
+                    msgEl.textContent = parts.join('; ');
+                } else {
+                    msgEl.textContent = err.error || (err.message || 'Login failed');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

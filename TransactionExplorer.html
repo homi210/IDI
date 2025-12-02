@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transaction Explorer - IDI Bank</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header>
+  <h1>Transaction Explorer</h1>
+  <nav>
+    <a href="Index.html">Home</a>
+    <a href="Admin.html">Admin</a>
+  </nav>
+</header>
+<main>
+  <div class="container">
+    <form id="filterForm" style="margin-bottom:12px">
+      <label for="filterUser">User</label>
+      <input id="filterUser" name="filterUser" placeholder="username (optional)" />
+      <label for="filterFrom">From (ISO date)</label>
+      <input id="filterFrom" name="filterFrom" placeholder="2025-12-01T00:00:00Z" />
+      <label for="filterTo">To (ISO date)</label>
+      <input id="filterTo" name="filterTo" placeholder="2025-12-03T00:00:00Z" />
+      <button type="submit">Filter</button>
+    </form>
+    <div id="status" class="message"></div>
+    <table id="txTable" style="width:100%; border-collapse:collapse;">
+      <thead><tr><th>Time</th><th>From</th><th>To</th><th>Amount</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+<script>
+const userData = JSON.parse(localStorage.getItem('idi_user') || '{}');
+if (!userData || userData.role !== 'admin') {
+    document.getElementById('status').className = 'message error';
+    document.getElementById('status').textContent = 'Admin login required';
+    setTimeout(() => { window.location.href = 'Account.html'; }, 1000);
+}
+
+function loadExplorer(filters={}) {
+    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+
+    // Apply filters
+    if (filters.user) {
+        transactions = transactions.filter(tx => tx.from === filters.user || tx.to === filters.user);
+    }
+    if (filters.from) {
+        transactions = transactions.filter(tx => new Date(tx.time) >= new Date(filters.from));
+    }
+    if (filters.to) {
+        transactions = transactions.filter(tx => new Date(tx.time) <= new Date(filters.to));
+    }
+
+    const tbody = document.querySelector('#txTable tbody');
+    tbody.innerHTML = '';
+
+    if (transactions.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="4" style="text-align:center">No transactions found</td>`;
+        tbody.appendChild(tr);
+    } else {
+        transactions.forEach(tx => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${tx.time}</td><td>${tx.from}</td><td>${tx.to}</td><td style="text-align:right">${tx.amount}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+document.getElementById('filterForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const user = document.getElementById('filterUser').value;
+    const from = document.getElementById('filterFrom').value;
+    const to = document.getElementById('filterTo').value;
+    loadExplorer({ user, from, to });
+});
+
+// Load all transactions by default
+loadExplorer();
+</script>
+
+</body>
+</html>
