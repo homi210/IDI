@@ -7,125 +7,96 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header>
-    <h1>Your Account</h1>
-    <nav>
-      <a href="Index.html">Home</a>
-      <a id="nav-login" href="Login.html">Login</a>
-      <a id="nav-signup" href="Signup.html">Sign up</a>
-      <button id="logoutBtn" style="display:none;">Logout</button>
-    </nav>
-  </header>
-  <main>
-    <div class="container">
-      <!-- Profile Section -->
-      <section id="profile">
-        <h2 id="owner">--</h2>
-        <p>Balance: <strong id="balance">--</strong> IDI</p>
-      </section>
+<header>
+  <h1>Your Account</h1>
+  <nav>
+    <a href="Index.html">Home</a>
+    <a id="nav-login" href="Login.html">Login</a>
+    <a id="nav-signup" href="Signup.html">Sign up</a>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </nav>
+</header>
+<main>
+  <div class="container">
+    <!-- Profile Section -->
+    <section id="profile">
+      <h2 id="owner">--</h2>
+      <p>Balance: <strong id="balance">--</strong> IDI</p>
+    </section>
 
-      <!-- Transfer Section -->
-      <section id="transfer">
-        <h3>Send IDI</h3>
-        <form id="sendForm">
-          <label for="toUsername">To (username)</label>
-          <input type="text" id="toUsername" name="toUsername" required>
-          <span id="toUsername-error" class="field-message"></span>
-          <label for="amount">Amount (IDI)</label>
-          <input type="number" id="amount" name="amount" step="0.01" required>
-          <span id="amount-error" class="field-message"></span>
-          <button type="submit">Send</button>
-        </form>
-        <p style="margin-top:12px"><a href="Transactions.html">View my transactions</a></p>
-        <div id="transferMessage" class="message" aria-live="polite"></div>
-      </section>
+    <!-- Transfer Section -->
+    <section id="transfer">
+      <h3>Send IDI</h3>
+      <form id="sendForm">
+        <label for="toUsername">To (username)</label>
+        <input type="text" id="toUsername" name="toUsername" required>
+        <span id="toUsername-error" class="field-message"></span>
+        <label for="amount">Amount (IDI)</label>
+        <input type="number" id="amount" name="amount" step="0.01" required>
+        <span id="amount-error" class="field-message"></span>
+        <button type="submit">Send</button>
+      </form>
+      <p style="margin-top:12px"><a href="Transactions.html">View my transactions</a></p>
+      <div id="transferMessage" class="message" aria-live="polite"></div>
+    </section>
 
-      <!-- Admin Token Panel (hidden by default) -->
-      <section id="admin-panel" style="display:none; margin-top:20px;">
-        <h3>Admin Token Control</h3>
-        <form id="spawnForm">
-          <label for="targetUsername">Username</label>
-          <input type="text" id="targetUsername" required>
-          <label for="tokenAmount">Amount (use negative to burn)</label>
-          <input type="number" id="tokenAmount" step="0.01" required>
-          <button type="submit">Update Tokens</button>
-        </form>
-        <div id="spawnMessage" class="message" aria-live="polite"></div>
-      </section>
-
-      <!-- Export Users Section -->
-      <section style="margin-top:20px;">
-        <h3>Export Users Data</h3>
-        <button id="exportUsersBtn">Save Users (Copy JSON)</button>
-        <textarea id="exportUsersArea" style="width:100%; height:150px; margin-top:8px;" readonly></textarea>
-      </section>
-
-    </div>
-  </main>
+    <!-- Admin Token Panel (hidden by default) -->
+    <section id="admin-panel" style="display:none; margin-top:20px;">
+      <h3>Admin Token Control</h3>
+      <form id="spawnForm">
+        <label for="targetUsername">Username</label>
+        <input type="text" id="targetUsername" required>
+        <label for="tokenAmount">Amount (positive to spawn, negative to burn)</label>
+        <input type="number" id="tokenAmount" step="0.01" required>
+        <button type="submit">Apply</button>
+      </form>
+      <div id="spawnMessage" class="message" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
 
 <script>
 (async () => {
-  // Load users from JSON if not already in localStorage
-  if (!localStorage.getItem('users')) {
-    try {
-      const res = await fetch('users.json');
-      const users = await res.json();
-      localStorage.setItem('users', JSON.stringify(users));
-    } catch (err) {
-      console.error('Failed to load users.json', err);
-      return;
-    }
-  }
-
-  // Ensure admin is applied once
-  if (!localStorage.getItem('adminApplied')) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const me = users.find(u => u.username === 'Homi');
-    if (me) {
-      me.role = 'admin';
-      localStorage.setItem('idi_user', JSON.stringify(me));
-      localStorage.setItem('adminApplied', 'true'); // prevent reload loop
-      console.log('Admin role applied to Homi');
-    }
-  }
-
-  // Load idi_user from localStorage
-  let userData = localStorage.getItem('idi_user');
-  if (!userData) {
-    console.error('No logged-in user found.');
+  // Get auth token from localStorage
+  const token = localStorage.getItem('idi_token');
+  if (!token) {
+    window.location.href = 'Login.html';
     return;
   }
-  const user = JSON.parse(userData);
 
-  // --- Fix for admin panel visibility ---
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const current = users.find(u => u.username === user.username);
-  if (current) {
-    user.role = current.role;
-    localStorage.setItem('idi_user', JSON.stringify(user));
+  // Fetch current user from server
+  let user;
+  try {
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Failed to fetch user');
+    user = await res.json();
+    document.getElementById('owner').textContent = user.fullName || user.username;
+    document.getElementById('balance').textContent = (user.balance || 0).toFixed(2);
+
+    // Show admin panel if user is admin
+    if (user.username === 'Homi') {
+      document.getElementById('admin-panel').style.display = 'block';
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Session expired. Please log in again.');
+    localStorage.removeItem('idi_token');
+    window.location.href = 'Login.html';
+    return;
   }
-
-  if (user.role === 'admin') {
-    document.getElementById('admin-panel').style.display = 'block';
-  }
-
-  // Update UI
-  document.getElementById('owner').textContent = `${user.fullName || user.username}`;
-  document.getElementById('balance').textContent = ((user.balance || 0)).toFixed(2);
-
-  const isAdmin = user.role === 'admin';
 
   // Logout button
   const logoutBtn = document.getElementById('logoutBtn');
   logoutBtn.style.display = 'inline-block';
   logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('idi_user');
     localStorage.removeItem('idi_token');
     window.location.href = 'Index.html';
   });
 
-  // Transfer form
-  document.getElementById('sendForm').addEventListener('submit', (e) => {
+  // Send IDI form
+  document.getElementById('sendForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const toUsername = document.getElementById('toUsername').value.trim();
     const amount = Number(document.getElementById('amount').value);
@@ -133,107 +104,83 @@
     msg.className = 'message'; msg.textContent = '';
 
     if (!toUsername || amount <= 0) {
-      msg.classList.add('error');
-      msg.textContent = 'Invalid recipient or amount';
+      msg.classList.add('error'); msg.textContent = 'Invalid recipient or amount';
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const sender = users.find(u => u.username === user.username);
-    const recipient = users.find(u => u.username === toUsername);
+    try {
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ toUsername, amount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Transaction failed');
 
-    if (!recipient) { msg.classList.add('error'); msg.textContent = 'Recipient not found'; return; }
-    if (sender.balance < amount) { msg.classList.add('error'); msg.textContent = 'Insufficient balance'; return; }
-
-    sender.balance -= amount;
-    recipient.balance = (recipient.balance || 0) + amount;
-    localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('idi_user', JSON.stringify(sender));
-
-    // --- Log transaction ---
-    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    transactions.push({
-      time: new Date().toISOString(),
-      from: sender.username,
-      to: recipient.username,
-      amount: amount
-    });
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    // --- End log ---
-
-    document.getElementById('balance').textContent = sender.balance.toFixed(2);
-    msg.classList.add('success');
-    msg.textContent = `Sent ${amount} IDI to ${recipient.username}`;
+      document.getElementById('balance').textContent = (data.from.balance || 0).toFixed(2);
+      msg.classList.add('success');
+      msg.textContent = `Sent ${data.amount} IDI to ${data.to.username}`;
+    } catch (err) {
+      msg.classList.add('error');
+      msg.textContent = err.message;
+    }
   });
 
   // Admin spawn/burn tokens
-  if (isAdmin) {
-    document.getElementById('spawnForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const targetUsername = document.getElementById('targetUsername').value.trim();
-      const amount = Number(document.getElementById('tokenAmount').value);
-      const msg = document.getElementById('spawnMessage');
-      msg.className = 'message'; msg.textContent = '';
+  const spawnForm = document.getElementById('spawnForm');
+  spawnForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const targetUsername = document.getElementById('targetUsername').value.trim();
+    const amount = Number(document.getElementById('tokenAmount').value);
+    const msg = document.getElementById('spawnMessage');
+    msg.className = 'message'; msg.textContent = '';
 
-      if (!targetUsername || isNaN(amount)) {
-        msg.classList.add('error');
-        msg.textContent = 'Enter valid username and amount';
-        return;
-      }
+    if (!targetUsername || amount === 0) {
+      msg.classList.add('error'); msg.textContent = 'Enter valid username and non-zero amount';
+      return;
+    }
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const target = users.find(u => u.username === targetUsername);
-      if (!target) {
-        msg.classList.add('error');
-        msg.textContent = 'User not found';
-        return;
-      }
-
-      const newBalance = (target.balance || 0) + amount;
-      if (newBalance < 0) {
-        msg.classList.add('error');
-        msg.textContent = 'Cannot burn more than user balance';
-        return;
-      }
-
-      target.balance = newBalance;
-      localStorage.setItem('users', JSON.stringify(users));
-
-      if (target.username === user.username) {
-        document.getElementById('balance').textContent = target.balance.toFixed(2);
-        localStorage.setItem('idi_user', JSON.stringify(target));
-      }
-
-      // --- Log admin transaction ---
-      const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-      transactions.push({
-        time: new Date().toISOString(),
-        from: amount >= 0 ? 'ADMIN (+)' : 'ADMIN (-)',
-        to: target.username,
-        amount: amount
+    try {
+      // First, get admin token from login (already stored as token)
+      const res = await fetch('/api/admin/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ username: targetUsername })
       });
-      localStorage.setItem('transactions', JSON.stringify(transactions));
-      // --- End log ---
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to issue token');
+
+      // Now adjust target balance
+      const res2 = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + data.token // acting as admin
+        },
+        body: JSON.stringify({ toUsername: targetUsername, amount })
+      });
+      const tx = await res2.json();
+      if (!res2.ok) throw new Error(tx.error || 'Failed to apply token change');
+
+      if (targetUsername === user.username) {
+        document.getElementById('balance').textContent = (tx.to.balance || 0).toFixed(2);
+      }
 
       msg.classList.add('success');
-      msg.textContent = `${amount >= 0 ? 'Spawned' : 'Burned'} ${Math.abs(amount)} IDI for ${target.username}`;
-    });
-  }
-
-  // --- Export users button ---
-  document.getElementById('exportUsersBtn').addEventListener('click', () => {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const json = JSON.stringify(users, null, 2);
-    const area = document.getElementById('exportUsersArea');
-    area.value = json;
-    area.focus();
-    area.select();
-    alert('Users JSON copied to textarea. You can save it to users.json manually.');
+      msg.textContent = `${amount > 0 ? 'Spawned' : 'Burned'} ${Math.abs(amount)} IDI ${amount > 0 ? 'to' : 'from'} ${targetUsername}`;
+    } catch (err) {
+      msg.classList.add('error');
+      msg.textContent = err.message;
+    }
   });
 
 })();
 </script>
-
 </body>
 </html>
-
