@@ -16,31 +16,30 @@
     <button id="logoutBtn" style="display:none;">Logout</button>
   </nav>
 </header>
+
 <main>
   <div class="container">
-    <!-- Profile Section -->
+    <!-- Profile -->
     <section id="profile">
       <h2 id="owner">--</h2>
       <p>Balance: <strong id="balance">--</strong> IDI</p>
     </section>
 
-    <!-- Transfer Section -->
+    <!-- Transfer -->
     <section id="transfer">
       <h3>Send IDI</h3>
       <form id="sendForm">
         <label for="toUsername">To (username)</label>
-        <input type="text" id="toUsername" name="toUsername" required>
-        <span id="toUsername-error" class="field-message"></span>
+        <input type="text" id="toUsername" required>
         <label for="amount">Amount (IDI)</label>
-        <input type="number" id="amount" name="amount" step="0.01" required>
-        <span id="amount-error" class="field-message"></span>
+        <input type="number" id="amount" step="0.01" required>
         <button type="submit">Send</button>
       </form>
       <p style="margin-top:12px"><a href="Transactions.html">View my transactions</a></p>
       <div id="transferMessage" class="message" aria-live="polite"></div>
     </section>
 
-    <!-- Admin Token Panel (hidden by default) -->
+    <!-- Admin spawn/burn -->
     <section id="admin-panel" style="display:none; margin-top:20px;">
       <h3>Admin Token Control</h3>
       <form id="spawnForm">
@@ -57,37 +56,32 @@
 
 <script>
 (async () => {
-  // Get auth token from localStorage
   const token = localStorage.getItem('idi_token');
   if (!token) {
     window.location.href = 'Login.html';
     return;
   }
 
-  // Fetch current user from server
   let user;
   try {
-    const res = await fetch('/api/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (!res.ok) throw new Error('Failed to fetch user');
+    const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) throw new Error('Session expired. Please log in again.');
     user = await res.json();
+
     document.getElementById('owner').textContent = user.fullName || user.username;
     document.getElementById('balance').textContent = (user.balance || 0).toFixed(2);
 
-    // Show admin panel if user is admin
-    if (user.username === 'Homi') {
+    if (user.role === 'admin' || user.username === 'Homi') {
       document.getElementById('admin-panel').style.display = 'block';
     }
   } catch (err) {
-    console.error(err);
-    alert('Session expired. Please log in again.');
+    alert(err.message);
     localStorage.removeItem('idi_token');
     window.location.href = 'Login.html';
     return;
   }
 
-  // Logout button
+  // Logout
   const logoutBtn = document.getElementById('logoutBtn');
   logoutBtn.style.display = 'inline-block';
   logoutBtn.addEventListener('click', () => {
@@ -95,8 +89,8 @@
     window.location.href = 'Index.html';
   });
 
-  // Send IDI form
-  document.getElementById('sendForm').addEventListener('submit', async (e) => {
+  // Send tokens
+  document.getElementById('sendForm').addEventListener('submit', async e => {
     e.preventDefault();
     const toUsername = document.getElementById('toUsername').value.trim();
     const amount = Number(document.getElementById('amount').value);
@@ -111,10 +105,7 @@
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ toUsername, amount })
       });
       const data = await res.json();
@@ -129,9 +120,9 @@
     }
   });
 
-  // Admin spawn/burn tokens
+  // Admin spawn/burn
   const spawnForm = document.getElementById('spawnForm');
-  spawnForm.addEventListener('submit', async (e) => {
+  spawnForm.addEventListener('submit', async e => {
     e.preventDefault();
     const targetUsername = document.getElementById('targetUsername').value.trim();
     const amount = Number(document.getElementById('tokenAmount').value);
@@ -144,32 +135,16 @@
     }
 
     try {
-      // First, get admin token from login (already stored as token)
-      const res = await fetch('/api/admin/token', {
+      const res = await fetch('/api/admin/adjust', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ username: targetUsername })
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ username: targetUsername, amount })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to issue token');
-
-      // Now adjust target balance
-      const res2 = await fetch('/api/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + data.token // acting as admin
-        },
-        body: JSON.stringify({ toUsername: targetUsername, amount })
-      });
-      const tx = await res2.json();
-      if (!res2.ok) throw new Error(tx.error || 'Failed to apply token change');
+      if (!res.ok) throw new Error(data.error || 'Failed to adjust balance');
 
       if (targetUsername === user.username) {
-        document.getElementById('balance').textContent = (tx.to.balance || 0).toFixed(2);
+        document.getElementById('balance').textContent = (data.balance || 0).toFixed(2);
       }
 
       msg.classList.add('success');
@@ -179,7 +154,6 @@
       msg.textContent = err.message;
     }
   });
-
 })();
 </script>
 </body>
