@@ -26,6 +26,8 @@
     <div id="loginMessage" class="message" aria-live="polite"></div>
 </main>
 
+
+<script>
 const form = document.getElementById('loginForm');
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -72,5 +74,8 @@ form.addEventListener('submit', async (e) => {
         msg.textContent = 'Failed to connect to server';
     }
 });
+
+</script>
+    
 </body>
 </html>
