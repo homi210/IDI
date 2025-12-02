@@ -15,6 +15,44 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(__dirname));
 
+// Sign up
+app.post('/api/signup', (req, res) => {
+  const { username, password, fullName, email } = req.body;
+  if (!username || !password || !fullName || !email) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  const users = readUsers();
+  if (users.find(u => u.username === username)) {
+    return res.status(400).json({ error: 'Username already exists' });
+  }
+
+  const newUser = {
+    id: Date.now().toString(),
+    username,
+    password, // plain text
+    fullName,
+    email,
+    balance: 0
+  };
+
+  users.push(newUser);
+  writeUsers(users);
+
+  const token = jwt.sign({ username: newUser.username, role: 'user' }, SECRET, { expiresIn: '12h' });
+
+  res.json({
+    id: newUser.id,
+    username: newUser.username,
+    fullName: newUser.fullName,
+    email: newUser.email,
+    balance: newUser.balance,
+    role: 'user',
+    token
+  });
+});
+
+
 // --- Helper functions ---
 function readUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
