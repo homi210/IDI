@@ -29,16 +29,17 @@ const users = [
     password: 'password123', // plaintext
     fullName: 'Hongming Lin',
     email: 'xhxhomi@gmail.com',
-    balance: 1000,
+    balance: 0,
     role: 'admin'
   }
   {
-    "username": "admin",
-    "password": "8068",
-    "fullName": "admin",
-    "email": "30chen_y@gmail.com",
-    "balance": 0,
-    "role": "admin"
+    id: '3',
+    username: 'Admin',
+    password: 'Admin123', // plaintext
+    fullName: 'Admin',
+    email: '30chen_y@aswarsaw.org',
+    balance: 10000000,
+    role: 'admin'
   }
 ];
 
