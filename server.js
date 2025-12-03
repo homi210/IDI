@@ -32,6 +32,14 @@ const users = [
     balance: 1000,
     role: 'admin'
   }
+  {
+    "username": "admin",
+    "password": "8068",
+    "fullName": "admin",
+    "email": "30chen_y@gmail.com",
+    "balance": 0,
+    "role": "admin"
+  }
 ];
 
 // --- Helper functions ---
