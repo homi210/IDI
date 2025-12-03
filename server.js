@@ -30,7 +30,7 @@ const users = [
     fullName: 'Hongming Lin',
     email: 'xhxhomi@gmail.com',
     balance: 0,
-    role: 'admin'
+    role: 'admin',
   }
   {
     id: '3',
