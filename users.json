@@ -13,8 +13,16 @@
     "password": "homi123",
     "fullName": "Hongming Lin",
     "email": "xhxhomi@gmail.com",
-    "balance": 1000,
+    "balance": 0,
     "token": "SG9taToxNzY0Njk4NDQ3Mjgw",
+    "role": "admin"
+  }
+  {
+    "username": "admin",
+    "password": "8068",
+    "fullName": "admin",
+    "email": "30chen_y@gmail.com",
+    "balance": 0,
     "role": "admin"
   }
 ]
