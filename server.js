@@ -31,7 +31,7 @@ const users = [
     email: 'xhxhomi@gmail.com',
     balance: 0,
     role: 'admin',
-  }
+  },
   {
     id: '3',
     username: 'Admin',
